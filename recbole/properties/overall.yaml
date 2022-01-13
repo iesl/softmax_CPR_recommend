@@ -12,11 +12,13 @@ save_dataloaders: False
 
 # training settings
 epochs: 300
-train_batch_size: 2048
+#train_batch_size: 2048
+#SASRec
+train_batch_size: 128
 learner: adam
 learning_rate: 0.001
-neg_sampling:
-  uniform: 1
+#neg_sampling:
+#  uniform: 1
 eval_step: 1
 stopping_step: 10
 clip_grad_norm: ~
@@ -29,7 +31,7 @@ eval_args:
   split: {'RS':[0.8,0.1,0.1]}
   group_by: user
   order: RO
-  mode: full
+  mode: pop100
 repeatable: False
 metrics: ["Recall","MRR","NDCG","Hit","Precision"]
 topk: [10]
