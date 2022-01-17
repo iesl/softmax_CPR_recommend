@@ -117,7 +117,7 @@ class SASRec(SequentialRecommender):
             self.loss_fct = BPRLoss()
         elif self.loss_type == 'CE':
             #self.loss_fct = nn.CrossEntropyLoss()
-            self.loss_fct = nn.NLLLoss(reduction='none') #modified for mfs
+            self.loss_fct = nn.NLLLoss(reduction='none', ignore_index=0) #modified for mfs
         else:
             raise NotImplementedError("Make sure 'loss_type' in ['BPR', 'CE']!")
 
@@ -307,9 +307,11 @@ class SASRec(SequentialRecommender):
                 # loss_fct = CrossEntropyLoss(ignore_index = -100)
                 # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 inp = torch.log(prediction_prob.view(-1, self.n_items)+1e-8)
-                print("Input length is: {} and target length is: {}".format(len(inp), len(item_seq)))
-                loss_raw = self.loss_fct(inp, item_seq)
-                loss = loss_raw[item_seq != -100].mean()
+                #print("Input length is: {} and target length is: {}".format(len(inp), len(item_seq)))
+                #for i in range(len(item_seq)):
+                #    print(item_seq[i])
+                loss_raw = self.loss_fct(inp, item_seq.view(-1))
+                loss = loss_raw.mean()
             else:
                 raise Exception("Labels can not be None")
             #logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
