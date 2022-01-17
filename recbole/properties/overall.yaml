@@ -26,6 +26,15 @@ clip_grad_norm: ~
 weight_decay: 0.0
 require_pow: False
 
+#MFS parameters
+n_facet: 3
+n_facet_all: 6
+n_facet_hidden: 2
+n_facet_window: -2
+n_facet_MLP: -1
+efficient_mode: 'even_last_2'
+weight_mode: 'dynamic'
+
 # evaluation settings
 eval_args: 
   split: {'RS':[0.8,0.1,0.1]}
