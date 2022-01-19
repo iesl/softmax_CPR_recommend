@@ -204,7 +204,7 @@ class SASRec(SequentialRecommender):
             hidden_emb_arr = []
             # h_facet_hidden -> H, n_face_window -> W, here 1 and 0
             for i in range(self.n_facet_hidden):
-                print('all_hidden_states length is {}. i is {}'.format(len(all_hidden_states), i))
+                #print('all_hidden_states length is {}. i is {}'.format(len(all_hidden_states), i))
                 hidden_states = all_hidden_states[-(i+1)] #i-th hidden-state embedding from the top
                 device = hidden_states.device
                 hidden_emb_arr.append(hidden_states)
