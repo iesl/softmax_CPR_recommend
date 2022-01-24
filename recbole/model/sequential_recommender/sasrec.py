@@ -204,7 +204,7 @@ class SASRec(SequentialRecommender):
             hidden_emb_arr = []
             # h_facet_hidden -> H, n_face_window -> W, here 1 and 0
             for i in range(self.n_facet_hidden):
-                print('all_hidden_states length is {}. i is {}'.format(len(all_hidden_states), i))
+                #print('all_hidden_states length is {}. i is {}'.format(len(all_hidden_states), i))
                 hidden_states = all_hidden_states[-(i+1)] #i-th hidden-state embedding from the top
                 device = hidden_states.device
                 hidden_emb_arr.append(hidden_states)
@@ -323,7 +323,9 @@ class SASRec(SequentialRecommender):
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         test_item = interaction[self.ITEM_ID]
         seq_output = self.forward(item_seq, item_seq_len)
+        seq_output = torch.FloatTensor([t.cpu().numpy() for t in seq_output]) #added for MFS
         test_item_emb = self.item_embedding(test_item)
+        print("seq_output size is {} and test_item_emb size is {}".format(seq_output.shape, test_item_emb.shape))
         scores = torch.mul(seq_output, test_item_emb).sum(dim=1)  # [B]
         return scores
 
