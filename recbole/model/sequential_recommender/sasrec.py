@@ -15,6 +15,7 @@ Reference:
 
 """
 
+import sys
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -178,7 +179,8 @@ class SASRec(SequentialRecommender):
         #return output  # [B H]
         return trm_output
 
-    def calculate_loss(self, interaction):
+
+    def calculate_loss_prob(self, interaction):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         all_hidden_states = self.forward(item_seq, item_seq_len)
@@ -217,6 +219,7 @@ class SASRec(SequentialRecommender):
                     hidden_emb_arr.append(shifted_hidden)
             #hidden_emb_arr -> (W*H, bsz, seq_len, hidden_size)
 
+
             #n_facet_MLP -> 1
             if self.n_facet_MLP > 0:
                 stacked_hidden_emb_raw_arr = torch.cat(hidden_emb_arr, dim=-1) #(bsz, seq_len, W*H*hidden_size)
@@ -225,6 +228,9 @@ class SASRec(SequentialRecommender):
                 stacked_hidden_emb_arr = torch.cat([hidden_emb_arr[0], gelu(hidden_emb_MLP)], dim=-1) #bsz, seq_len, 2*hidden_size
             else:
                 stacked_hidden_emb_arr = hidden_emb_arr[0]
+            
+            #Only use the hidden state corresponding to the last word
+            stacked_hidden_emb_arr = stacked_hidden_emb_arr[:,-1,:].unsqueeze(dim=1)
 
             #list of linear projects per facet
             projected_emb_arr = []
@@ -234,7 +240,8 @@ class SASRec(SequentialRecommender):
 
             #logits for orig facets
             if self.efficient_mode == 'even_last_2':
-                bsz, seq_len, hidden_size = all_hidden_states[-1].size()
+                #bsz, seq_len, hidden_size = all_hidden_states[-1].size()
+                bsz, seq_len, hidden_size_cat = stacked_hidden_emb_arr.size()
                 logit_all = torch.empty( (bsz, seq_len, self.n_items) , device=all_hidden_states[-1].device )
                 n_facet_not_last = self.n_facet_all - (self.n_facet_effective-1) # 6 - (3-1) = 4 -> partitions
                 for i in range(n_facet_not_last):
@@ -310,15 +317,22 @@ class SASRec(SequentialRecommender):
                 #print("Input length is: {} and target length is: {}".format(len(inp), len(item_seq)))
                 #for i in range(len(item_seq)):
                 #    print(item_seq[i])
-                loss_raw = self.loss_fct(inp, item_seq.view(-1))
+                #loss_raw = self.loss_fct(inp, item_seq.view(-1))
+                loss_raw = self.loss_fct(inp, pos_items.view(-1))
                 loss = loss_raw.mean()
             else:
                 raise Exception("Labels can not be None")
             #logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
             #loss = self.loss_fct(logits, pos_items)
-            return loss
+            return loss, prediction_prob.squeeze()
+    
+    def calculate_loss(self, interaction):
+        loss, prediction_prob = self.calculate_loss_prob(interaction)
+        return loss
 
     def predict(self, interaction):
+        print("current mixture of softmax cannot support this function in an efficient way")
+        sys.exit(0)
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         test_item = interaction[self.ITEM_ID]
@@ -330,9 +344,12 @@ class SASRec(SequentialRecommender):
         return scores
 
     def full_sort_predict(self, interaction):
-        item_seq = interaction[self.ITEM_SEQ]
-        item_seq_len = interaction[self.ITEM_SEQ_LEN]
-        seq_output = self.forward(item_seq, item_seq_len)
-        test_items_emb = self.item_embedding.weight
-        scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
-        return scores
+        loss, prediction_prob = self.calculate_loss_prob(interaction)
+        return prediction_prob
+    #def full_sort_predict(self, interaction):
+    #    item_seq = interaction[self.ITEM_SEQ]
+    #    item_seq_len = interaction[self.ITEM_SEQ_LEN]
+    #    seq_output = self.forward(item_seq, item_seq_len)
+    #    test_items_emb = self.item_embedding.weight
+    #    scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))  # [B n_items]
+    #    return scores

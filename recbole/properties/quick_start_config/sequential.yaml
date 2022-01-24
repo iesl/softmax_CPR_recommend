@@ -1,5 +1,6 @@
 eval_args:
   split: {'LS': 'valid_and_test'}
   order: TO
-  mode: pop100
+  mode: full
+  #mode: pop100
 repeatable: True

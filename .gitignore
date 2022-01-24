@@ -1,6 +1,9 @@
 # Saved models
 /saved*
 *.pth
+*~
+dataset/*
+run_SASRec_hs.sh
 
 .vscode/
 .idea/
