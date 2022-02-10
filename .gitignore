@@ -3,7 +3,8 @@
 *.pth
 *~
 dataset/*
-run_SASRec_hs.sh
+*.swp
+slurm-*
 
 .vscode/
 .idea/

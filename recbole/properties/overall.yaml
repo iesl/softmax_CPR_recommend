@@ -27,12 +27,15 @@ weight_decay: 0.0
 require_pow: False
 
 #MFS parameters
-n_facet: 3
-n_facet_all: 6
-n_facet_hidden: 2
-n_facet_window: -2
-n_facet_MLP: -1
-efficient_mode: 'even_last_2'
+n_facet: 1
+n_facet_all: 1
+n_facet_hidden: 1
+n_facet_window: 0
+n_facet_MLP: 0
+n_facet_context: 0
+n_facet_reranker: 0
+n_facet_emb: 0
+efficient_mode: 'None'
 weight_mode: 'dynamic'
 
 # evaluation settings

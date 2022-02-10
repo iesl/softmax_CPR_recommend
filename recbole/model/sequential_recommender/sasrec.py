@@ -52,21 +52,38 @@ class SASRec(SequentialRecommender):
         self.initializer_range = config['initializer_range']
         self.loss_type = config['loss_type']
         self.n_facet_all = config['n_facet_all'] #added for mfs
-        self.n_facet_effective = config['n_facet'] #added for mfs
         self.n_facet = config['n_facet'] #added for mfs
         self.n_facet_window = config['n_facet_window'] #added for mfs
         self.n_facet_hidden = config['n_facet_hidden'] #added for mfs
         self.n_facet_MLP = config['n_facet_MLP'] #added for mfs
+        self.n_facet_context = config['n_facet_context'] #added for dynamic partioning
+        self.n_facet_reranker = config['n_facet_reranker'] #added for dynamic partioning
+        self.n_facet_emb = config['n_facet_emb'] #added for dynamic partioning
+        self.efficient_mode = config['efficient_mode'] #added for mfs
+        self.weight_mode = config['weight_mode'] #added for mfs
+        #self.reranker_CAN_NUM = [500, 100, 20]
+        self.reranker_CAN_NUM = [100]
+        self.partition_merging_mode = 'add'
+        #self.partition_merging_mode = 'replace'
+        self.candidates_from_previous_reranker = True
+        if self.weight_mode == 'max_logits':
+            self.n_facet_effective = 1
+        else:
+            self.n_facet_effective = self.n_facet
+            
+        if self.efficient_mode == 'None':
+            assert self.n_facet + self.n_facet_context + self.n_facet_reranker*len(self.reranker_CAN_NUM) + self.n_facet_emb == self.n_facet_all
+        else:
+            assert self.n_facet + self.n_facet_context + self.n_facet_reranker*len(self.reranker_CAN_NUM) + self.n_facet_emb <= self.n_facet_all
+        assert self.n_facet_emb == 0 or self.n_facet_emb == 2
         assert self.n_facet_MLP <= 0 #-1 or 0
         assert self.n_facet_window <= 0
         self.n_facet_window = - self.n_facet_window
         self.n_facet_MLP = - self.n_facet_MLP
         self.softmax_nonlinear='None' #added for mfs
-        self.efficient_mode = config['efficient_mode'] #added for mfs
         self.only_compute_loss = True #added for mfs
         self.n_embd = self.hidden_size #added for mfs
         self.use_proj_bias = config['use_proj_bias'] #added for mfs
-        self.weight_mode = config['weight_mode'] #added for mfs
         # for multiple input hidden states
         if self.n_facet_MLP > 0:
             hidden_state_input_ratio = 1 + self.n_facet_MLP #1 + 1
@@ -74,21 +91,8 @@ class SASRec(SequentialRecommender):
         else:            
             hidden_state_input_ratio = self.n_facet_hidden * (self.n_facet_window+1) #1 * (0+1)
         total_lin_dim = self.n_embd * hidden_state_input_ratio
-        small_value = 0.0001
+        #small_value = 1
         self.project_arr = nn.ModuleList([nn.Linear(total_lin_dim, self.n_embd, bias=self.use_proj_bias) for i in range(self.n_facet_all)])
-        for i in range(self.n_facet_all):
-            if self.use_proj_bias:
-                self.project_arr[i].bias.data.zero_()
-            linear_weights = torch.zeros_like(self.project_arr[i].weight.data)
-
-            # if i!= n_facet - 1:
-            #     linear_weights = linear_weights + small_value * (torch.rand((config.n_embd, total_lin_dim)) - 0.5 )
-            linear_weights[:,:self.n_embd] = torch.eye(self.n_embd)
-            #if i < n_facet:
-            #     linear_weights[:,:config.n_embd] = torch.eye(config.n_embd)
-            # else:
-            #     linear_weights[:,:config.n_embd] = 1e-10 * torch.eye(config.n_embd)
-            self.project_arr[i].weight.data = linear_weights
 
         self.project_emb = nn.Linear(self.n_embd, self.n_embd, bias=self.use_proj_bias)
         if len(self.weight_mode) > 0:
@@ -96,7 +100,7 @@ class SASRec(SequentialRecommender):
             #self.weight_facet_decoder = nn.Linear(config.hidden_size * n_facet_hidden * (n_facet_window+1), n_facet)
             self.weight_global = nn.Parameter( torch.ones(self.n_facet_effective) )
         self.output_probs = True
-        self.c = 100
+        #self.c = 100
         # define layers and loss
         self.item_embedding = nn.Embedding(self.n_items, self.hidden_size, padding_idx=0)
         self.position_embedding = nn.Embedding(self.max_seq_length, self.hidden_size)
@@ -124,8 +128,39 @@ class SASRec(SequentialRecommender):
 
         # parameters initialization
         self.apply(self._init_weights)
+        
+        small_value = 0.0001
+        #print("before init", self.project_arr[0].weight.data)
+       # for i in range(self.n_facet_all):
+       #     if self.use_proj_bias:
+       #         self.project_arr[i].bias.data.zero_()
+       #     #linear_weights = torch.zeros_like(self.project_arr[i].weight.data)
+       #     linear_weights = small_value * (torch.rand((self.n_embd, total_lin_dim)) - 0.5 )
+
+       #     # if i!= n_facet - 1:
+       #     #     linear_weights = linear_weights + small_value * (torch.rand((config.n_embd, total_lin_dim)) - 0.5 )
+       #     
+       #     #if i < self.n_facet + self.n_facet_context + self.n_facet_reranker*len(self.reranker_CAN_NUM):
+       #     #    linear_weights[:,:self.n_embd] = torch.eye(self.n_embd)
+       #     
+       #     #if self.partition_merging_mode == 'add':
+       #     #    if i < self.n_facet:
+       #     #        linear_weights[:,:self.n_embd] = torch.eye(self.n_embd)
+       #     #else:
+       #     #    if i < self.n_facet + self.n_facet_context + self.n_facet_reranker*len(self.reranker_CAN_NUM):
+       #     #        linear_weights[:,:self.n_embd] = torch.eye(self.n_embd)
+       #     
+
+       #     #if i < n_facet:
+       #     #     linear_weights[:,:config.n_embd] = torch.eye(config.n_embd)
+       #     # else:
+       #     #     linear_weights[:,:config.n_embd] = 1e-10 * torch.eye(config.n_embd)
+       #     self.project_arr[i].weight.data = linear_weights
+        #print("after init", self.project_arr[0].weight.data)
+
     def get_facet_emb(self,input_emb, i):
         return self.project_arr[i](input_emb)
+
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
     # only last token for inputs_ids if past is defined in kwargs
         if "past" in kwargs and kwargs["past"]:
@@ -218,19 +253,19 @@ class SASRec(SequentialRecommender):
                         shifted_hidden = torch.zeros( (bsz, hidden_states.size(1), hidden_size), device = device)
                     hidden_emb_arr.append(shifted_hidden)
             #hidden_emb_arr -> (W*H, bsz, seq_len, hidden_size)
-
+            
 
             #n_facet_MLP -> 1
             if self.n_facet_MLP > 0:
                 stacked_hidden_emb_raw_arr = torch.cat(hidden_emb_arr, dim=-1) #(bsz, seq_len, W*H*hidden_size)
                 # self.MLP_linear = nn.Linear(config.n_embd * (n_facet_hidden * (n_facet_window+1) ), config.n_embd * n_facet_MLP) -> why +1?
                 hidden_emb_MLP = self.MLP_linear(stacked_hidden_emb_raw_arr) #bsz, seq_len, hidden_size
-                stacked_hidden_emb_arr = torch.cat([hidden_emb_arr[0], gelu(hidden_emb_MLP)], dim=-1) #bsz, seq_len, 2*hidden_size
+                stacked_hidden_emb_arr_raw = torch.cat([hidden_emb_arr[0], gelu(hidden_emb_MLP)], dim=-1) #bsz, seq_len, 2*hidden_size
             else:
-                stacked_hidden_emb_arr = hidden_emb_arr[0]
+                stacked_hidden_emb_arr_raw = hidden_emb_arr[0]
             
             #Only use the hidden state corresponding to the last word
-            stacked_hidden_emb_arr = stacked_hidden_emb_arr[:,-1,:].unsqueeze(dim=1)
+            stacked_hidden_emb_arr = stacked_hidden_emb_arr_raw[:,-1,:].unsqueeze(dim=1)
 
             #list of linear projects per facet
             projected_emb_arr = []
@@ -241,9 +276,12 @@ class SASRec(SequentialRecommender):
             #logits for orig facets
             if self.efficient_mode == 'even_last_2':
                 #bsz, seq_len, hidden_size = all_hidden_states[-1].size()
+                assert self.n_facet_context ==0
+                assert self.n_facet_reranker == 0
+                assert self.n_facet_emb == 0
                 bsz, seq_len, hidden_size_cat = stacked_hidden_emb_arr.size()
                 logit_all = torch.empty( (bsz, seq_len, self.n_items) , device=all_hidden_states[-1].device )
-                n_facet_not_last = self.n_facet_all - (self.n_facet_effective-1) # 6 - (3-1) = 4 -> partitions
+                n_facet_not_last = self.n_facet_all - (self.n_facet-1) # 6 - (3-1) = 4 -> partitions
                 for i in range(n_facet_not_last):
                     #projected_emb = self.project_arr[i](stacked_hidden_emb_arr)
                     projected_emb = self.get_facet_emb(stacked_hidden_emb_arr,i) #bsz, seq_len, n_embd
@@ -259,7 +297,7 @@ class SASRec(SequentialRecommender):
                     logit_all[:,:,i::n_facet_not_last] = F.linear(projected_emb, self.item_embedding.weight[i::n_facet_not_last,:], None)
                 facet_lm_logits_arr.append(logit_all)
                 #last two softmax, project_arr -> L^f
-                for i in range(self.n_facet_effective-1):
+                for i in range(self.n_facet-1):
                     projected_emb = self.project_arr[-(i+1)](stacked_hidden_emb_arr)
                     #projected_emb = self.project_arr[n_facet_not_last+i](stacked_hidden_emb_arr)
                     #projected_emb = self.get_facet_emb(stacked_hidden_emb_arr,n_facet_not_last+i)
@@ -269,6 +307,7 @@ class SASRec(SequentialRecommender):
                     #facet_lm_logits_arr.append( self.item_embedding( projected_emb ) )
                     facet_lm_logits_arr.append(F.linear(projected_emb, self.item_embedding.weight, None))
             else:
+                rereanker_candidate_token_ids_arr = []
                 for i in range(self.n_facet):
                 #     #linear projection
                     projected_emb = self.get_facet_emb(stacked_hidden_emb_arr, i) #(bsz, seq_len, hidden_dim)
@@ -277,12 +316,84 @@ class SASRec(SequentialRecommender):
                     #lm_logits = self.item_embedding(projected_emb) #(bsz, seq_len, vocab_size)
                     lm_logits = F.linear(projected_emb, self.item_embedding.weight, None)
                     facet_lm_logits_arr.append(lm_logits)
-            
+                    if i < self.n_facet_reranker and not self.candidates_from_previous_reranker:
+                        candidate_token_ids = []
+                        for j in range(len(self.reranker_CAN_NUM)):
+                            _, candidate_token_ids_ = torch.topk(lm_logits, self.reranker_CAN_NUM[j])
+                            candidate_token_ids.append(candidate_token_ids_)
+                        rereanker_candidate_token_ids_arr.append(candidate_token_ids)
+                #print("before getting facets", self.project_arr[0].weight.data)
+                #sys.exit(0)
+                #print("before partitions", facet_lm_logits_arr[0].sum())
+
+                for i in range(self.n_facet_reranker):
+                    for j in range(len(self.reranker_CAN_NUM)):
+                        projected_emb = self.get_facet_emb(stacked_hidden_emb_arr, self.n_facet+i*len(self.reranker_CAN_NUM) + j) #(bsz, seq_len, hidden_dim)
+                        projected_emb_arr.append(projected_emb)
+
+                for i in range(self.n_facet_context):
+                    projected_emb = self.get_facet_emb(stacked_hidden_emb_arr, self.n_facet+self.n_facet_reranker*len(self.reranker_CAN_NUM)+i) #(bsz, seq_len, hidden_dim)
+                    projected_emb_arr.append(projected_emb)
+
+                #to generate context-based embeddings for words in input
+                for i in range(self.n_facet_emb):
+                    projected_emb = self.get_facet_emb(stacked_hidden_emb_arr_raw, self.n_facet + self.n_facet_context + self.n_facet_reranker*len(self.reranker_CAN_NUM) + i) #(bsz, seq_len, hidden_dim)
+                    projected_emb_arr.append(projected_emb)
+                #print("projected_emb_arr", projected_emb_arr)
+
+                for i in range(self.n_facet_reranker):
+                    bsz, seq_len, hidden_size = projected_emb_arr[i].size()
+                    for j in range(len(self.reranker_CAN_NUM)):
+                        for k in range(bsz):
+                            if self.candidates_from_previous_reranker:
+                                _, candidate_token_ids = torch.topk(facet_lm_logits_arr[i][k], self.reranker_CAN_NUM[j]) #(seq_len, topk)
+                            else:
+                                candidate_token_ids = rereanker_candidate_token_ids_arr[i][j][k]
+                            #logit_hidden_reranker_topn = F.linear(projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k],  self.item_embedding.weight[candidate_token_ids, :], None) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
+                            logit_hidden_reranker_topn = (projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k].unsqueeze(dim=1).expand(seq_len, self.reranker_CAN_NUM[j], hidden_size) * self.item_embedding.weight[candidate_token_ids, :] ).sum(dim=-1) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
+                            if self.partition_merging_mode == 'add':
+                                #print("inside reranker")
+                                facet_lm_logits_arr[i][k].scatter_add_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
+                            else:
+                                facet_lm_logits_arr[i][k].scatter_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
+
+                for i in range(self.n_facet_context):
+                    bsz, seq_len, hidden_size = projected_emb_arr[i].size()
+                    logit_hidden_context_arr = []
+                    for j in range(bsz):
+                        logit = F.linear(projected_emb_arr[self.n_facet + self.n_facet_reranker*len(self.reranker_CAN_NUM) + i][j], self.item_embedding.weight[item_seq[j, :], :], None)
+                        if self.n_facet_emb == 2:
+                            #print(projected_emb_arr[-2].size())
+                            #print(projected_emb_arr[-1].size())
+                            #print(logit.size())
+                            logit += F.linear(projected_emb_arr[-2][j,-1,:], projected_emb_arr[-1][j], None)
+                        logit_hidden_context_arr.append(logit)
+                    logit_hidden_context = torch.stack(logit_hidden_context_arr, dim =0) #bsz, seq_len, seq_len
+
+                    item_seq_expand = item_seq.unsqueeze(dim=1).expand(-1,seq_len,-1)
+                    only_new_logits = torch.zeros_like(facet_lm_logits_arr[i])
+                    only_new_logits.scatter_add_(dim=2, index=item_seq_expand, src=logit_hidden_context)
+                    item_count = torch.zeros_like(only_new_logits) + 1e-15
+                    item_count.scatter_add_(dim=2, index=item_seq_expand,src=torch.ones_like(item_seq_expand).to(dtype=item_count.dtype))
+                    only_new_logits = only_new_logits / item_count
+                    if self.partition_merging_mode == 'replace':
+                        facet_lm_logits_arr[i].scatter_(dim=2, index=item_seq_expand, src=torch.zeros_like(item_seq_expand).to(dtype=facet_lm_logits_arr[i].dtype) )
+                    facet_lm_logits_arr[i] = facet_lm_logits_arr[i] + only_new_logits
+                    #if self.partition_merging_mode == 'add':
+                    #    #print("inside context")
+                    #    item_seq_expand = item_seq.unsqueeze(dim=1).expand(-1,seq_len,-1)
+                    #    only_new_logits = torch.zeros_like(facet_lm_logits_arr[i])
+                    #    only_new_logits.scatter(dim=2, index=item_seq_expand, src=logit_hidden_context)
+                    #    facet_lm_logits_arr[i] = facet_lm_logits_arr[i] + only_new_logits
+                    #else:
+                    #    #facet_lm_logits_arr[i].scatter(dim=2, index=item_seq.unsqueeze(dim=1).expand(-1,seq_len,-1), src=logit_hidden_context)
+                #print("facet_lm_logits_arr", facet_lm_logits_arr)
+                #sys.exit(0)
+                #print("after partitions", facet_lm_logits_arr[0].sum())
 
             #logits for n_facet (==n_facet_effective)
-            for i in range(self.n_facet):       
-                facet_lm_logits_real_arr.append( facet_lm_logits_arr[i] )
-            stacked_facet_lm_logits = torch.stack(facet_lm_logits_arr, dim=0)
+            #for i in range(self.n_facet):       
+            #    facet_lm_logits_real_arr.append( facet_lm_logits_arr[i] )
 
             #weight_mode = ''
             weight = None
@@ -290,11 +401,17 @@ class SASRec(SequentialRecommender):
                 weight = self.weight_facet_decoder(stacked_hidden_emb_arr).softmax(dim=-1) #hidden_dim*hidden_input_state_ration -> n_facet_effective
             elif self.weight_mode == 'static':
                 weight = self.weight_global.softmax(dim=-1) #torch.ones(n_facet_effective)
+            elif self.weight_mode == 'max_logits':
+                stacked_facet_lm_logits = torch.stack(facet_lm_logits_arr, dim=0)
+                facet_lm_logits_arr = [stacked_facet_lm_logits.amax(dim=0)]
+            #print("after max", facet_lm_logits_arr[0].sum())
+            #sys.exit(0)
+                
             #print(weight)
             prediction_prob = 0
 
             for i in range(self.n_facet_effective):
-                facet_lm_logits = facet_lm_logits_real_arr[i]
+                facet_lm_logits = facet_lm_logits_arr[i]
                 if self.softmax_nonlinear == 'sigsoftmax': #'None' here
                     facet_lm_logits_sig = torch.exp(facet_lm_logits - facet_lm_logits.max(dim=-1,keepdim=True)[0]) * (1e-20 + torch.sigmoid(facet_lm_logits))
                     facet_lm_logits_softmax = facet_lm_logits_sig / facet_lm_logits_sig.sum(dim=-1,keepdim=True)
