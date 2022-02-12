@@ -61,8 +61,8 @@ class SASRec(SequentialRecommender):
         self.n_facet_emb = config['n_facet_emb'] #added for dynamic partioning
         self.efficient_mode = config['efficient_mode'] #added for mfs
         self.weight_mode = config['weight_mode'] #added for mfs
-        #self.reranker_CAN_NUM = [500, 100, 20]
-        self.reranker_CAN_NUM = [100]
+        self.reranker_CAN_NUM = [500, 100, 20]
+        #self.reranker_CAN_NUM = [100]
         self.partition_merging_mode = 'add'
         #self.partition_merging_mode = 'replace'
         self.candidates_from_previous_reranker = True
@@ -344,33 +344,47 @@ class SASRec(SequentialRecommender):
                 for i in range(self.n_facet_reranker):
                     bsz, seq_len, hidden_size = projected_emb_arr[i].size()
                     for j in range(len(self.reranker_CAN_NUM)):
-                        for k in range(bsz):
-                            if self.candidates_from_previous_reranker:
-                                _, candidate_token_ids = torch.topk(facet_lm_logits_arr[i][k], self.reranker_CAN_NUM[j]) #(seq_len, topk)
-                            else:
-                                candidate_token_ids = rereanker_candidate_token_ids_arr[i][j][k]
-                            #logit_hidden_reranker_topn = F.linear(projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k],  self.item_embedding.weight[candidate_token_ids, :], None) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
-                            logit_hidden_reranker_topn = (projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k].unsqueeze(dim=1).expand(seq_len, self.reranker_CAN_NUM[j], hidden_size) * self.item_embedding.weight[candidate_token_ids, :] ).sum(dim=-1) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
-                            if self.partition_merging_mode == 'add':
-                                #print("inside reranker")
-                                facet_lm_logits_arr[i][k].scatter_add_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
-                            else:
-                                facet_lm_logits_arr[i][k].scatter_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
+                        if self.candidates_from_previous_reranker:
+                            _, candidate_token_ids = torch.topk(facet_lm_logits_arr[i], self.reranker_CAN_NUM[j]) #(bsz, seq_len, topk)
+                        else:
+                            candidate_token_ids = rereanker_candidate_token_ids_arr[i][j]
+                        logit_hidden_reranker_topn = (projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j].unsqueeze(dim=2).expand(bsz, seq_len, self.reranker_CAN_NUM[j], hidden_size) * self.item_embedding.weight[candidate_token_ids, :] ).sum(dim=-1) #(bsz, seq_len, emb_size) x (bsz, seq_len, topk, emb_size) -> (bsz, seq_len, topk)
+                        if self.partition_merging_mode == 'add':
+                            #print("inside reranker")
+                            facet_lm_logits_arr[i].scatter_add_(2, candidate_token_ids, logit_hidden_reranker_topn) #(bsz, seq_len, vocab_size) <- (bsz, seq_len, topk) x (bsz, seq_len, topk)
+                        else:
+                            facet_lm_logits_arr[i].scatter_(2, candidate_token_ids, logit_hidden_reranker_topn) #(bsz, seq_len, vocab_size) <- (bsz, seq_len, topk) x (bsz, seq_len, topk)
+                        #for k in range(bsz):
+                        #    if self.candidates_from_previous_reranker:
+                        #        _, candidate_token_ids = torch.topk(facet_lm_logits_arr[i][k], self.reranker_CAN_NUM[j]) #(seq_len, topk)
+                        #    else:
+                        #        candidate_token_ids = rereanker_candidate_token_ids_arr[i][j][k]
+                        #    #logit_hidden_reranker_topn = F.linear(projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k],  self.item_embedding.weight[candidate_token_ids, :], None) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
+                        #    logit_hidden_reranker_topn = (projected_emb_arr[self.n_facet + i*len(self.reranker_CAN_NUM) + j][k].unsqueeze(dim=1).expand(seq_len, self.reranker_CAN_NUM[j], hidden_size) * self.item_embedding.weight[candidate_token_ids, :] ).sum(dim=-1) #(seq_len, emb_size) x (seq_len, topk, emb_size) -> (seq_len, topk)
+                        #    if self.partition_merging_mode == 'add':
+                        #        #print("inside reranker")
+                        #        facet_lm_logits_arr[i][k].scatter_add_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
+                        #    else:
+                        #        facet_lm_logits_arr[i][k].scatter_(1, candidate_token_ids, logit_hidden_reranker_topn) #(seq_len, vocab_size) <- (seq_len, topk) x (seq_len, topk)
 
                 for i in range(self.n_facet_context):
-                    bsz, seq_len, hidden_size = projected_emb_arr[i].size()
-                    logit_hidden_context_arr = []
-                    for j in range(bsz):
-                        logit = F.linear(projected_emb_arr[self.n_facet + self.n_facet_reranker*len(self.reranker_CAN_NUM) + i][j], self.item_embedding.weight[item_seq[j, :], :], None)
-                        if self.n_facet_emb == 2:
-                            #print(projected_emb_arr[-2].size())
-                            #print(projected_emb_arr[-1].size())
-                            #print(logit.size())
-                            logit += F.linear(projected_emb_arr[-2][j,-1,:], projected_emb_arr[-1][j], None)
-                        logit_hidden_context_arr.append(logit)
-                    logit_hidden_context = torch.stack(logit_hidden_context_arr, dim =0) #bsz, seq_len, seq_len
+                    bsz, seq_len_1, hidden_size = projected_emb_arr[i].size()
+                    bsz, seq_len_2 = item_seq.size()
+                    logit_hidden_context = (projected_emb_arr[self.n_facet + self.n_facet_reranker*len(self.reranker_CAN_NUM) + i].unsqueeze(dim=2).expand(-1,-1,seq_len_2,-1) * self.item_embedding.weight[item_seq, :].unsqueeze(dim=1).expand(-1,seq_len_1,-1,-1) ).sum(dim=-1)
+                    if self.n_facet_emb == 2:
+                        logit_hidden_context = logit_hidden_context + ( projected_emb_arr[-2][:,-1,:].unsqueeze(dim=1).unsqueeze(dim=1).expand(-1,seq_len_1,seq_len_2,-1) * projected_emb_arr[-1].unsqueeze(dim=1).expand(-1,seq_len_1,-1,-1) ).sum(dim=-1)
+                    #logit_hidden_context_arr = []
+                    #for j in range(bsz):
+                    #    logit = F.linear(projected_emb_arr[self.n_facet + self.n_facet_reranker*len(self.reranker_CAN_NUM) + i][j], self.item_embedding.weight[item_seq[j, :], :], None)
+                    #    if self.n_facet_emb == 2:
+                    #        #print(projected_emb_arr[-2].size())
+                    #        #print(projected_emb_arr[-1].size())
+                    #        #print(logit.size())
+                    #        logit += F.linear(projected_emb_arr[-2][j,-1,:], projected_emb_arr[-1][j], None)
+                    #    logit_hidden_context_arr.append(logit)
+                    #logit_hidden_context = torch.stack(logit_hidden_context_arr, dim =0) #bsz, seq_len_1, seq_len_2
 
-                    item_seq_expand = item_seq.unsqueeze(dim=1).expand(-1,seq_len,-1)
+                    item_seq_expand = item_seq.unsqueeze(dim=1).expand(-1,seq_len_1,-1)
                     only_new_logits = torch.zeros_like(facet_lm_logits_arr[i])
                     only_new_logits.scatter_add_(dim=2, index=item_seq_expand, src=logit_hidden_context)
                     item_count = torch.zeros_like(only_new_logits) + 1e-15
