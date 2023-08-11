@@ -8,7 +8,7 @@ Each folder should contain one file called {folder_name}.inter (e.g., amazon-bea
 
 ## Step 2: Run the code
 
-If your server support slurm, you can just run run_hyper_slurm.sh (parallel). Otherwise, run run_hyper_loop.sh (sequential)
+If your server supports slurm, you can just run run_hyper_slurm.sh (parallelly). Otherwise, run run_hyper_loop.sh (sequentially)
 
 You can change the variables (param_arr, model, and model_name) in the script to switch between GRU4Rec and SASRec, and change the config (model_config and model_config_name) to switch the softmax alternatives
 
