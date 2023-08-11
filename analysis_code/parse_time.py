@@ -3,7 +3,7 @@ import os
 import glob
 import numpy as np
 
-input_dir = './slog/'
+input_dir = '../slog/'
 output_file = 'time.csv'
 file_prefix = 'time_book_'
 

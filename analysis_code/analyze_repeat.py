@@ -6,46 +6,40 @@ max_seq_len = 50
 #max_user_num = 1000
 max_user_num = 10000000000
 
-out_image_folder = 'out_fig/'
-
-#dataset_name = 'Retailrocket'
-#input_path = "dataset/retailrocket/retailrocket.inter"
-#item_col_name = 'item_id:token'
-#user_col_name = 'visitor_id:token'
-#time_col_name = "timestamp:float"
+out_image_folder = '../out_fig/'
 
 #dataset_name = 'Steam'
-#input_path = "dataset/steam/steam.inter"
+#input_path = "../dataset/steam/steam.inter"
 #item_col_name = 'product_id:token'
 #user_col_name = 'user_id:token'
 #time_col_name = "timestamp:float"
 
 #dataset_name = 'Bridge to Algebra (2008-2009)'
-#input_path = "dataset/algebra2008_2009/algebra2008_2009.inter"
+#input_path = "../dataset/algebra2008_2009/algebra2008_2009.inter"
 #item_col_name = 'problem_step_name:token'
 #user_col_name = 'student_id:token'
 #time_col_name = "step_start_time:float"
 
 #dataset_name = 'Gowalla'
-#input_path = "dataset/gowalla/gowalla.inter"
+#input_path = "../dataset/gowalla/gowalla.inter"
 #item_col_name = 'item_id:token'
 #user_col_name = 'user_id:token'
 #time_col_name = "timestamp:float"
 
 dataset_name = 'Yoochoose-clicks'
-input_path = "dataset/yoochoose-clicks/yoochoose-clicks.inter"
+input_path = "../dataset/yoochoose-clicks/yoochoose-clicks.inter"
 item_col_name = 'item_id:token'
 user_col_name = 'session_id:token'
 time_col_name = "timestamp:float"
 
 #dataset_name = 'Tmall-buy'
-#input_path = "dataset/tmall-buy/tmall-buy.inter"
+#input_path = "../dataset/tmall-buy/tmall-buy.inter"
 #item_col_name = 'item_id:token'
 #user_col_name = 'user_id:token'
 #time_col_name = "timestamp:float"
 
 #dataset_name = 'Twitch-100k'
-#input_path = "dataset/Twitch-100k/Twitch-100k.inter"
+#input_path = "../dataset/Twitch-100k/Twitch-100k.inter"
 #item_col_name = 'item_id:token'
 #user_col_name = 'user_id:token'
 #time_col_name = "time_start:float"

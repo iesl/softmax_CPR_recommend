@@ -55,10 +55,11 @@ for (( i=0; i<=$(( $total -1 )); i++ ))
 do
     echo ${param_arr[$i]}
     echo ${dataset_name_arr[$i]}
+    #sbatch --time=7-00:00:00 --output=./slog/time_${dataset_name_arr[$i]}_${model_name}_${model_config_name}_%j.out --job-name=multi-rec -G 1 --cpus-per-task=12 --mem=251G run_single_model_log.sh $model $model_name $model_config $model_config_name ${dataset_arr[$i]} ${dataset_config_arr[$i]} ${dataset_name_arr[$i]} ${param_arr[$i]} #for time experiment
     if [ -f "hyper_results_hsz_128/hyper_${model_name}_${dataset_name_arr[$i]}_${model_config_name}" ]; then
         echo "hyper_results_hsz_128/hyper_${model_name}_${dataset_name_arr[$i]}_${model_config_name} exists" 
     else
-        ./run_single_model.sh $model $model_name $model_config $model_config_name ${dataset_arr[$i]} ${dataset_config_arr[$i]} ${dataset_name_arr[$i]} ${param_arr[$i]}
+        sbatch --time=7-00:00:00 --output=./slog/hyper_${dataset_name_arr[$i]}_${model_name}_${model_config_name}_%j.out --job-name=multi-rec -G 1 --cpus-per-task=2 --mem=40G run_single_model.sh $model $model_name $model_config $model_config_name ${dataset_arr[$i]} ${dataset_config_arr[$i]} ${dataset_name_arr[$i]} ${param_arr[$i]}
     fi
 done
 

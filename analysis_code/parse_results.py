@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-input_dir = './hyper_results'
+input_dir = '../hyper_results'
 output_file = 'all_results_2.csv'
 major_metric = 'ndcg@10'
 

@@ -8,10 +8,10 @@ grid_run = 'new'
 
 #input_dir = './hyper_results'
 if grid_run == 'new':
-    input_dir = './hyper_results_hsz_128'
+    input_dir = '../hyper_results_hsz_128'
     output_file = 'small_results_para_128.csv'
 elif grid_run == 'old':
-    input_dir = './hyper_results_hsz'
+    input_dir = '../hyper_results_hsz'
     #output_file = 'small_results_para_max.csv'
     output_file = 'small_results_para.csv'
 major_metric = 'ndcg@10'
