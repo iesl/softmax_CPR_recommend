@@ -233,11 +233,15 @@ class Repeat_Recommendation_Decoder(nn.Module):
             output_er.masked_fill_(mask, -1e9)
 
         output_er = nn.Softmax(dim=-1)(output_er)
-        output_er = output_er.unsqueeze(1)
 
-        map_matrix = build_map(item_seq, self.device, max_index=self.num_item)
-        output_er = torch.matmul(output_er, map_matrix).squeeze(1).to(self.device)
-        repeat_recommendation_decoder = output_er.squeeze(1).to(self.device)
+        batch_size, b_len = item_seq.size()
+        repeat_recommendation_decoder = torch.zeros([batch_size, self.num_item], device=self.device)
+        repeat_recommendation_decoder.scatter_add_(1, item_seq, output_er) #(bsz, vocab_size) <- (bsz, context_item) x (bsz, context_item)
+        #output_er = output_er.unsqueeze(1)
+        #map_matrix = build_map(item_seq, self.device, max_index=self.num_item)
+        #output_er = torch.matmul(output_er, map_matrix).squeeze(1).to(self.device)
+
+        #repeat_recommendation_decoder = output_er.squeeze(1).to(self.device)
 
         return repeat_recommendation_decoder.to(self.device)
 
@@ -283,9 +287,14 @@ class Explore_Recommendation_Decoder(nn.Module):
         output_e = torch.cat([output_e, last_memory_values], dim=1)
         output_e = self.dropout(self.matrix_for_explore(output_e))
 
-        map_matrix = build_map(item_seq, self.device, max_index=self.num_item)
-        explore_mask = torch.bmm((item_seq > 0).float().unsqueeze(1), map_matrix).squeeze(1)
-        output_e = output_e.masked_fill(explore_mask.bool(), float('-inf'))
+        #map_matrix = build_map(item_seq, self.device, max_index=self.num_item)
+        #explore_mask = torch.bmm((item_seq > 0).float().unsqueeze(1), map_matrix).squeeze(1)
+        #output_e = output_e.masked_fill(explore_mask.bool(), float('-inf'))
+        item_seq_first = item_seq[:,0].unsqueeze(1).expand_as(item_seq)
+        #item_seq_first[item_seq > 0] = 0 #make the padding 0 become the first item in the sequence
+        item_seq_first = item_seq_first.masked_fill(item_seq > 0, 0)
+        item_seq_first.requires_grad_(False)
+        output_e.scatter_add_(1, item_seq + item_seq_first, float('-inf') * torch.ones_like(item_seq))
         explore_recommendation_decoder = nn.Softmax(1)(output_e)
 
         return explore_recommendation_decoder

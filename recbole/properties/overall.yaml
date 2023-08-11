@@ -17,6 +17,7 @@ epochs: 300
 train_batch_size: 128
 learner: adam
 learning_rate: 0.001
+#neg_sampling: None
 #neg_sampling:
 #  uniform: 1
 eval_step: 1
@@ -36,7 +37,15 @@ n_facet_context: 0
 n_facet_reranker: 0
 n_facet_emb: 0
 efficient_mode: 'None'
-weight_mode: 'dynamic'
+weight_mode: ''
+context_norm: 1
+post_remove_context: 0
+partition_merging_mode: 'replace'
+reranker_merging_mode: 'replace'
+reranker_CAN_NUM: 500,100,20
+use_proj_bias: 1
+#partition_merging_mode: 'add'
+#weight_mode: 'max_logits'
 
 # evaluation settings
 eval_args: 

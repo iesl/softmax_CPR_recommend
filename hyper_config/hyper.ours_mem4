@@ -1,0 +1,4 @@
+learning_rate choice [0.0005, 0.001, 0.002]
+train_batch_size choice [16,32]
+hidden_dropout_prob choice [0, 0.1]
+hidden_size [32]

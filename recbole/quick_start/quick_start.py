@@ -52,6 +52,9 @@ def run_recbole(model=None, dataset=None, config_file_list=None, config_dict=Non
     model = get_model(config['model'])(config, train_data.dataset).to(config['device'])
     logger.info(model)
 
+    total_params = sum(x.data.nelement() for x in model.parameters())
+    logger.info('total parameters: {}'.format(total_params))
+
     # trainer loading and initialization
     trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
 

@@ -1,5 +1,7 @@
 embedding_size: 64
 hidden_size: 64
 num_layers: 1
-dropout_prob: 0.5
+dropout_prob: 0
 loss_type: 'CE'
+use_att: False
+use_out_emb: False

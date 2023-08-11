@@ -6,6 +6,7 @@ from recbole.model.sequential_recommender.fdsa import FDSA
 from recbole.model.sequential_recommender.fpmc import FPMC
 from recbole.model.sequential_recommender.gcsan import GCSAN
 from recbole.model.sequential_recommender.gru4rec import GRU4Rec
+from recbole.model.sequential_recommender.gru4rec_ours import GRU4Rec_Ours
 from recbole.model.sequential_recommender.gru4recf import GRU4RecF
 from recbole.model.sequential_recommender.gru4reckg import GRU4RecKG
 from recbole.model.sequential_recommender.ksr import KSR

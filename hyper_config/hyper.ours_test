@@ -1,0 +1,2 @@
+hidden_dropout_prob choice [0, 0.1, 0.2]
+attn_dropout_prob choice [0.1]

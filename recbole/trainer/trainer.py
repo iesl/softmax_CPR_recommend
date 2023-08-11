@@ -250,7 +250,7 @@ class Trainer(AbstractTrainer):
     def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses):
         des = self.config['loss_decimal_place'] or 4
         train_loss_output = (set_color('epoch %d training', 'green') + ' [' + set_color('time', 'blue') +
-                             ': %.2fs, ') % (epoch_idx, e_time - s_time)
+                             ': %.4fs, ') % (epoch_idx, e_time - s_time)
         if isinstance(losses, tuple):
             des = (set_color('train_loss%d', 'blue') + ': %.' + str(des) + 'f')
             train_loss_output += ', '.join(des % (idx + 1, loss) for idx, loss in enumerate(losses))
@@ -342,7 +342,7 @@ class Trainer(AbstractTrainer):
                 )
                 valid_end_time = time()
                 valid_score_output = (set_color("epoch %d evaluating", 'green') + " [" + set_color("time", 'blue')
-                                    + ": %.2fs, " + set_color("valid_score", 'blue') + ": %f]") % \
+                                    + ": %.4fs, " + set_color("valid_score", 'blue') + ": %f]") % \
                                      (epoch_idx, valid_end_time - valid_start_time, valid_score)
                 valid_result_output = set_color('valid result', 'blue') + ': \n' + dict2str(valid_result)
                 if verbose:
@@ -790,7 +790,7 @@ class DecisionTreeTrainer(AbstractTrainer):
 
                 valid_end_time = time()
                 valid_score_output = (set_color("epoch %d evaluating", 'green') + " [" + set_color("time", 'blue')
-                                    + ": %.2fs, " + set_color("valid_score", 'blue') + ": %f]") % \
+                                    + ": %.4fs, " + set_color("valid_score", 'blue') + ": %f]") % \
                                      (epoch_idx, valid_end_time - valid_start_time, valid_score)
                 valid_result_output = set_color('valid result', 'blue') + ': \n' + dict2str(valid_result)
                 if verbose:

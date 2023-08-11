@@ -5,6 +5,12 @@
 dataset/*
 *.swp
 slurm-*
+hyper_results*
+RecDatasets
+slog*
+.ipynb*
+old*
+out_fig*
 
 .vscode/
 .idea/

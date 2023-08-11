@@ -148,10 +148,13 @@ class HyperTuning(object):
         algo='exhaustive',
         max_evals=100
     ):
+
         self.best_score = None
         self.best_params = None
         self.best_test_result = None
         self.params2result = {}
+        #self.seed = 1
+        self.neg_sampling = None
 
         self.objective_function = objective_function
         self.max_evals = max_evals
@@ -275,9 +278,14 @@ class HyperTuning(object):
         """
         import hyperopt
         config_dict = params.copy()
+        
+        config_dict['neg_sampling'] = self.neg_sampling #HS hack
+        #saved = False #HS hack
+        
         params_str = self.params2str(params)
         print('running parameters:', config_dict)
         result_dict = self.objective_function(config_dict, self.fixed_config_file_list)
+        #result_dict = self.objective_function(config_dict, self.fixed_config_file_list, saved=saved) #HS hack
         self.params2result[params_str] = result_dict
         score, bigger = result_dict['best_valid_score'], result_dict['valid_score_bigger']
 
@@ -306,4 +314,5 @@ class HyperTuning(object):
 
         """
         from hyperopt import fmin
+        #fmin(self.trial, self.space, algo=self.algo, max_evals=self.max_evals, rstate=np.random.default_rng(self.seed))
         fmin(self.trial, self.space, algo=self.algo, max_evals=self.max_evals)
