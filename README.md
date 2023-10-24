@@ -33,7 +33,7 @@ Notice that our current code does not support the negative sampling during the t
 If you have any questions or find any bugs, please send an email to Haw-Shiuan Chang (ken77921@gmail.com).
 
 ## Citation
-If you use the code or Softmax-CPR in your work, please cite the following paper (http://arxiv.org/abs/2305.12289):
+If you use the code or Softmax-CPR in your work, please cite the following paper (https://arxiv.org/abs/2310.14079):
 
 Haw-Shiuan Chang, Nikhil Agarwal, and Andrew McCallum. 2024. To Copy, or not to Copy; That is a Critical Issue of the Output Softmax Layer in Neural Sequential Recommenders. In Proceedings of The 17th ACM Inernational Conference on Web Search and Data Mining (WSDM 24).
 
