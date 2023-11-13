@@ -48,4 +48,5 @@ Haw-Shiuan Chang, Nikhil Agarwal, and Andrew McCallum. 2024. To Copy, or not to 
 ```
 
 ## License
-The code from Recbole is under  [MIT License](https://github.com/RUCAIBox/RecBole/blob/master/LICENSE) but our modification (e.g., Softmax-CPR implementation) is under Apache-2.0 license. 
+All RecBole data and code are under [MIT License](https://github.com/RUCAIBox/RecBole/blob/master/LICENSE) and can only be used for academic purposes (as indicated in https://github.com/RUCAIBox/RecBole#license on 10/25/2023).
+Our modification  (e.g., Softmax-CPR implementation) is under Apache-2.0 license and could be used for commercial purpose.

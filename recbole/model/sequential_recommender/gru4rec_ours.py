@@ -459,7 +459,7 @@ class GRU4Rec_Ours(SequentialRecommender):
             #logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
             #loss = self.loss_fct(logits, pos_items)
             #return loss
-            return loss, prediction_prob.squeeze(dim=0)
+            return loss, prediction_prob.squeeze(dim=1)
 
     def calculate_loss(self, interaction):
         loss, prediction_prob = self.calculate_loss_prob(interaction)
