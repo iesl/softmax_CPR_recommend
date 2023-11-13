@@ -67,9 +67,21 @@ class GRU4Rec_Ours(SequentialRecommender):
         self.use_att = config['use_att'] #added for mfs
         self.only_compute_loss = True #added for mfs
         if self.use_att:
-            self.n_embd = 2* self.hidden_size #added for mfs
+            assert self.use_out_emb
+            self.dropout = nn.Dropout(self.dropout_prob)
+            self.We = nn.Linear(self.hidden_size, self.hidden_size)
+            self.Ue = nn.Linear(self.hidden_size, self.hidden_size)
+            self.tanh = nn.Tanh()
+            self.Ve = nn.Linear(self.hidden_size, 1)
+            out_size = 2*self.hidden_size
         else:
-            self.n_embd = self.hidden_size #added for mfs
+            self.dense = nn.Linear(self.hidden_size, self.embedding_size)
+            out_size = self.embedding_size
+        self.n_embd = out_size
+        #if self.use_att:
+        #    self.n_embd = 2* self.hidden_size #added for mfs
+        #else:
+        #    self.n_embd = self.hidden_size #added for mfs
 
         self.use_proj_bias = config['use_proj_bias'] #added for mfs
         self.weight_mode = config['weight_mode'] #added for mfs
@@ -129,17 +141,6 @@ class GRU4Rec_Ours(SequentialRecommender):
         )
         self.item_embedding = nn.Embedding(self.n_items, self.embedding_size, padding_idx=0)
 
-        if self.use_att:
-            assert self.use_out_emb
-            self.dropout = nn.Dropout(self.dropout_prob)
-            self.We = nn.Linear(self.hidden_size, self.hidden_size)
-            self.Ue = nn.Linear(self.hidden_size, self.hidden_size)
-            self.tanh = nn.Tanh()
-            self.Ve = nn.Linear(self.hidden_size, 1)
-            out_size = 2*self.hidden_size
-        else:
-            self.dense = nn.Linear(self.hidden_size, self.embedding_size)
-            out_size = self.hidden_size
         
         if self.use_out_emb:
             self.out_item_embedding = nn.Linear(out_size, self.n_items, bias = False)
@@ -458,7 +459,7 @@ class GRU4Rec_Ours(SequentialRecommender):
             #logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
             #loss = self.loss_fct(logits, pos_items)
             #return loss
-            return loss, prediction_prob.squeeze()
+            return loss, prediction_prob.squeeze(dim=0)
 
     def calculate_loss(self, interaction):
         loss, prediction_prob = self.calculate_loss_prob(interaction)
