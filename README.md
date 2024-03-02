@@ -2,6 +2,10 @@
 
 <p align="center"><img src="https://github.com/iesl/softmax_CPR_recommend/blob/master/softmax_limits.png?raw=true" width="651" height="365"></p>
 
+## News
+
+You can use our models (gru4reccpr and sasreccpr) in the latest version of RecBole. To adjust the hyperparameters, please check the comments in the following config files: [GRU4RecCPR](https://github.com/RUCAIBox/RecBole/blob/master/recbole/properties/model/GRU4RecCPR.yaml) and [SASRecCPR](https://github.com/RUCAIBox/RecBole/blob/master/recbole/properties/model/SASRecCPR.yaml).
+
 ## Introduction
 
 The similarity structure of the global item embedding in the softmax layer sometimes forces the single hidden state embedding to be close to new items when copying is a better choice, while sometimes forcing the hidden state to be close to the items from the input inappropriately. To alleviate the problem, we adapt the recently-proposed softmax alternatives such as softmax-CPR code from https://github.com/iesl/Softmax-CPR to sequential recommendation tasks and demonstrate that the new softmax architectures unleash the capability of the neural encoder on learning when to copy and when to exclude the items from the input sequence. By only making some simple modifications on the output softmax layer for SASRec and GRU4Rec, softmax-CPR achieves consistent improvement in 12 datasets. With almost the same model size, our best method not only improves the average NDCG@10 of GRU4Rec in 5 datasets with duplicated items by 10% (4%-17% individually) but also improves 7 datasets without duplicated items by 24% (8%-39%)!
